@@ -2,7 +2,7 @@ import random
 import string
 from urllib.parse import urlparse
 from multiprocessing import Pool
-
+import sys
 import bs4 as bs
 import requests
 from urllib.parse import urljoin
@@ -22,8 +22,12 @@ def get_links(url):
     except requests.ReadTimeout:
         print('cant get response!')
         return []
+    except TypeError:
+        #return [url[:4]+'s'+url[4:]]
+        return []
     except Exception as e:
-        print('only errors...', )  # catched  e
+        print(e,'only errors...', )  # catched  e
+        #print("Unexpected error:", sys.exc_info()[0])
         return []
 
 
@@ -56,13 +60,18 @@ def main():
     visited_urls = []
     cnt = 3
     p = Pool(processes=10)
-    to_parse = [url_gen() for _ in range(cnt)]
-
+    # to_parse = [url_gen() for _ in range(cnt)]
+    to_parse = ['https://telegram.org']
     i = 0
     while i < 20 and len(to_parse) > 0 and 'youtube' not in visited_domains:
         data = p.map(get_links, to_parse)
         links = [url for site in data for url in site]
-        to_parse = list(set([get_dom(url) for url in links if get_dom(url) not in visited_domains]))
+
+        if i<3:
+            to_parse = list(set([url for url in links]))
+        else:
+            to_parse = list(set([get_dom(url) for url in links if get_dom(url) not in visited_domains]))
+
         visited_urls.extend(links)
         visited_urls = list(set(visited_urls))
         visited_domains.extend([get_dom(link) for link in links])
@@ -72,7 +81,7 @@ def main():
             fd.write('\n'.join(visited_domains))
         with open('urls.txt', 'w') as fu:
             fu.write('\n'.join(visited_urls))
-
+        print(to_parse)
         print('--------------------------end--of--iteration--{}-------------------------------------'.format(i))
 
         for dom in visited_domains:
